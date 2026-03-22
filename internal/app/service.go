@@ -464,9 +464,9 @@ func backendScore(backend storage.Backend) int {
 	case "active":
 		statusScore = 0
 	case "draining":
-		statusScore = 10
+		statusScore = 1
 	default:
-		statusScore = 20
+		statusScore = 2
 	}
 	healthScore := 0
 	switch backend.HealthStatus {
@@ -477,7 +477,7 @@ func backendScore(backend storage.Backend) int {
 	default:
 		healthScore = 5
 	}
-	return statusScore + healthScore + backend.Priority
+	return statusScore*10000 + healthScore*1000 + backend.Priority
 }
 
 func filterHeaders(source http.Header) http.Header {
