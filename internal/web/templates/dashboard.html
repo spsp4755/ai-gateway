@@ -1,0 +1,356 @@
+{{ define "content" }}
+<header class="hero">
+  <div>
+    <p class="eyebrow">Air-Gapped Gateway</p>
+    <h1>{{ .Title }}</h1>
+    <p class="subtitle">An operations console for managing many vLLM servers behind one OpenAI-compatible gateway.</p>
+  </div>
+  <div class="hero-meta">
+    <span class="pill">Version {{ .Version }}</span>
+    {{ if .AdminProtected }}<span class="pill">Admin Auth Enabled</span>{{ end }}
+    {{ if .AllowAnonymous }}<span class="pill warn">Anonymous API Allowed</span>{{ else }}<span class="pill">Bearer API Required</span>{{ end }}
+  </div>
+</header>
+
+{{ if .Notice }}
+<section class="banner">
+  <strong>Notice</strong>
+  <span>{{ .Notice }}</span>
+</section>
+{{ end }}
+
+{{ if .CreatedKey }}
+<section class="banner success">
+  <strong>New API key</strong>
+  <code id="created-key">{{ .CreatedKey }}</code>
+  <button class="copy-button" type="button" onclick="navigator.clipboard.writeText(document.getElementById('created-key').textContent)">Copy</button>
+</section>
+{{ end }}
+
+<section class="card-grid">
+  <article class="stat-card">
+    <span>Logical models</span>
+    <strong>{{ .Stats.ModelsCount }}</strong>
+  </article>
+  <article class="stat-card">
+    <span>Backends</span>
+    <strong>{{ .Stats.BackendsCount }}</strong>
+  </article>
+  <article class="stat-card">
+    <span>Healthy backends</span>
+    <strong>{{ .Stats.HealthyBackends }}</strong>
+  </article>
+  <article class="stat-card">
+    <span>Total requests</span>
+    <strong>{{ .Stats.RequestCount }}</strong>
+  </article>
+</section>
+
+<main class="dashboard">
+  {{ $root := . }}
+  <section class="panel">
+    <div class="panel-header">
+      <h2>Create logical model</h2>
+      <p>Define the model names that clients will use in `model` first.</p>
+    </div>
+    <form class="form-grid" method="post" action="/admin/models">
+      <label>
+        <span>Model name</span>
+        <input name="name" placeholder="qwen-chat-prod" required>
+      </label>
+      <label>
+        <span>Status</span>
+        <select name="status">
+          <option value="active">active</option>
+          <option value="inactive">inactive</option>
+        </select>
+      </label>
+      <label class="wide">
+        <span>Description</span>
+        <input name="description" placeholder="Primary Korean assistant model">
+      </label>
+      <button class="primary" type="submit">Add logical model</button>
+    </form>
+
+    <div class="stack">
+      {{ range .Models }}
+      <form class="entity-card" method="post" action="/admin/models/{{ .ID }}/update">
+        <div class="entity-head">
+          <h3>{{ .Name }}</h3>
+          <span class="status {{ statusClass .Status }}">{{ .Status }}</span>
+        </div>
+        <div class="form-grid compact">
+          <label>
+            <span>Name</span>
+            <input name="name" value="{{ .Name }}" required>
+          </label>
+          <label>
+            <span>Status</span>
+            <select name="status">
+              <option value="active" {{ if eq .Status "active" }}selected{{ end }}>active</option>
+              <option value="inactive" {{ if eq .Status "inactive" }}selected{{ end }}>inactive</option>
+            </select>
+          </label>
+          <label class="wide">
+            <span>Description</span>
+            <input name="description" value="{{ .Description }}">
+          </label>
+        </div>
+        <div class="actions">
+          <button class="primary" type="submit">Save</button>
+          <button class="danger" type="submit" formaction="/admin/models/{{ .ID }}/delete" formmethod="post">Delete</button>
+        </div>
+      </form>
+      {{ else }}
+      <p class="empty">No logical models have been added yet.</p>
+      {{ end }}
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-header">
+      <h2>Create vLLM backend</h2>
+      <p>Attach existing vLLM servers to the gateway.</p>
+    </div>
+    <form class="form-grid" method="post" action="/admin/backends">
+      <label>
+        <span>Logical model</span>
+        <select name="logical_model_id" required>
+          <option value="">Select one</option>
+          {{ range .Models }}
+          <option value="{{ .ID }}">{{ .Name }}</option>
+          {{ end }}
+        </select>
+      </label>
+      <label>
+        <span>Backend name</span>
+        <input name="name" placeholder="gpu07-qwen14b-a" required>
+      </label>
+      <label>
+        <span>Base URL</span>
+        <input name="base_url" placeholder="http://10.0.0.21:8000" required>
+      </label>
+      <label>
+        <span>Upstream model name</span>
+        <input name="upstream_model_name" placeholder="Qwen/Qwen2.5-14B-Instruct" required>
+      </label>
+      <label>
+        <span>Status</span>
+        <select name="status">
+          <option value="active">active</option>
+          <option value="draining">draining</option>
+          <option value="disabled">disabled</option>
+        </select>
+      </label>
+      <label>
+        <span>Health path</span>
+        <input name="healthcheck_path" value="/health">
+      </label>
+      <label>
+        <span>Priority</span>
+        <input name="priority" value="100" inputmode="numeric">
+      </label>
+      <label>
+        <span>Weight</span>
+        <input name="weight" value="100" inputmode="numeric">
+      </label>
+      <label>
+        <span>Timeout (ms)</span>
+        <input name="timeout_ms" value="120000" inputmode="numeric">
+      </label>
+      <label class="wide">
+        <span>Upstream API Key</span>
+        <input name="api_key" placeholder="Optional vLLM --api-key value">
+      </label>
+      <button class="primary" type="submit">Add backend</button>
+    </form>
+
+    <div class="stack">
+      {{ range .Backends }}
+      {{ $backend := . }}
+      <form class="entity-card" method="post" action="/admin/backends/{{ .ID }}/update">
+        <div class="entity-head">
+          <div>
+            <h3>{{ .Name }}</h3>
+            <p>{{ .LogicalModelName }} -> {{ .BaseURL }}</p>
+          </div>
+          <div class="status-group">
+            <span class="status {{ statusClass .Status }}">{{ .Status }}</span>
+            <span class="status {{ statusClass .HealthStatus }}">{{ .HealthStatus }}</span>
+          </div>
+        </div>
+        <div class="form-grid compact">
+          <label>
+            <span>Logical model</span>
+            <select name="logical_model_id">
+              {{ range $root.Models }}
+              <option value="{{ .ID }}" {{ if eq .ID $backend.LogicalModelID }}selected{{ end }}>{{ .Name }}</option>
+              {{ end }}
+            </select>
+          </label>
+          <label>
+            <span>Backend name</span>
+            <input name="name" value="{{ .Name }}" required>
+          </label>
+          <label>
+            <span>Base URL</span>
+            <input name="base_url" value="{{ .BaseURL }}" required>
+          </label>
+          <label>
+            <span>Upstream model name</span>
+            <input name="upstream_model_name" value="{{ .UpstreamModelName }}" required>
+          </label>
+          <label>
+            <span>Status</span>
+            <select name="status">
+              <option value="active" {{ if eq .Status "active" }}selected{{ end }}>active</option>
+              <option value="draining" {{ if eq .Status "draining" }}selected{{ end }}>draining</option>
+              <option value="disabled" {{ if eq .Status "disabled" }}selected{{ end }}>disabled</option>
+            </select>
+          </label>
+          <label>
+            <span>Health path</span>
+            <input name="healthcheck_path" value="{{ .HealthcheckPath }}">
+          </label>
+          <label>
+            <span>Priority</span>
+            <input name="priority" value="{{ .Priority }}" inputmode="numeric">
+          </label>
+          <label>
+            <span>Weight</span>
+            <input name="weight" value="{{ .Weight }}" inputmode="numeric">
+          </label>
+          <label>
+            <span>Timeout (ms)</span>
+            <input name="timeout_ms" value="{{ .TimeoutMs }}" inputmode="numeric">
+          </label>
+          <label class="wide">
+            <span>Upstream API Key</span>
+            <input name="api_key" value="{{ .APIKey }}">
+          </label>
+        </div>
+        <div class="meta-row">
+          <span>Last check: {{ shortTime .LastCheckedAt }}</span>
+          <span>Error: {{ if .LastError }}{{ .LastError }}{{ else }}-{{ end }}</span>
+        </div>
+        <div class="actions">
+          <button class="primary" type="submit">Save</button>
+          <button type="submit" formaction="/admin/backends/{{ .ID }}/probe" formmethod="post">Probe</button>
+          <button class="danger" type="submit" formaction="/admin/backends/{{ .ID }}/delete" formmethod="post">Delete</button>
+        </div>
+      </form>
+      {{ else }}
+      <p class="empty">No backends have been registered yet.</p>
+      {{ end }}
+    </div>
+  </section>
+
+  <section class="panel two-column">
+    <div>
+      <div class="panel-header">
+        <h2>API keys</h2>
+        <p>Issue keys for clients that call the northbound gateway API.</p>
+      </div>
+      <form class="form-grid" method="post" action="/admin/api-keys">
+        <label>
+          <span>Name</span>
+          <input name="name" placeholder="internal-chatbot" required>
+        </label>
+        <label class="wide">
+          <span>Allowed models</span>
+          <input name="allowed_models" placeholder="qwen-chat-prod, llama-kor-fast">
+        </label>
+        <label class="checkbox-row">
+          <input type="checkbox" name="enabled" checked>
+          <span>Enable immediately</span>
+        </label>
+        <button class="primary" type="submit">Create API key</button>
+      </form>
+
+      <div class="stack">
+        {{ range .APIKeys }}
+        <article class="entity-card">
+          <div class="entity-head">
+            <h3>{{ .Name }}</h3>
+            <span class="status {{ if .Enabled }}status-good{{ else }}status-bad{{ end }}">{{ if .Enabled }}enabled{{ else }}disabled{{ end }}</span>
+          </div>
+          <div class="meta-row">
+            <span>Allowed models: {{ if .AllowedModels }}{{ .AllowedModels }}{{ else }}all{{ end }}</span>
+            <span>Last used: {{ shortTime .LastUsedAt }}</span>
+          </div>
+          <div class="actions">
+            <form method="post" action="/admin/api-keys/{{ .ID }}/toggle">
+              <input type="hidden" name="enabled" value="{{ if .Enabled }}0{{ else }}1{{ end }}">
+              <button type="submit">{{ if .Enabled }}Disable{{ else }}Enable{{ end }}</button>
+            </form>
+            <form method="post" action="/admin/api-keys/{{ .ID }}/delete">
+              <button class="danger" type="submit">Delete</button>
+            </form>
+          </div>
+        </article>
+        {{ else }}
+        <p class="empty">No API keys have been issued yet.</p>
+        {{ end }}
+      </div>
+    </div>
+
+    <div>
+      <div class="panel-header">
+        <h2>Import / export</h2>
+        <p>Back up the gateway configuration as JSON or move it to another environment.</p>
+      </div>
+      <div class="stack">
+        <a class="button-link" href="/admin/export">Export current configuration</a>
+        <form class="form-grid" method="post" action="/admin/import" enctype="multipart/form-data">
+          <label class="wide">
+            <span>JSON file</span>
+            <input type="file" name="config_file" accept="application/json" required>
+          </label>
+          <button class="primary" type="submit">Import configuration</button>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-header">
+      <h2>Recent requests</h2>
+      <p>Inspect recent proxy calls to spot failures and backend drift quickly.</p>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Time</th>
+            <th>Model</th>
+            <th>Backend</th>
+            <th>Code</th>
+            <th>Latency(ms)</th>
+            <th>Success</th>
+            <th>Error</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{ range .Logs }}
+          <tr>
+            <td>{{ shortTime .CreatedAt }}</td>
+            <td>{{ .LogicalModelName }}</td>
+            <td>{{ if .BackendName }}{{ .BackendName }}{{ else }}-{{ end }}</td>
+            <td>{{ .StatusCode }}</td>
+            <td>{{ .LatencyMs }}</td>
+            <td>{{ if .Success }}yes{{ else }}no{{ end }}</td>
+            <td>{{ if .ErrorMessage }}{{ .ErrorMessage }}{{ else }}-{{ end }}</td>
+          </tr>
+          {{ else }}
+          <tr>
+            <td colspan="7" class="empty">No proxied requests yet.</td>
+          </tr>
+          {{ end }}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</main>
+{{ end }}
+
+{{ define "dashboard.html" }}{{ template "base" . }}{{ end }}
