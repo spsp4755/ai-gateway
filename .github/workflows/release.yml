@@ -26,13 +26,13 @@ jobs:
         run: go mod download
 
       - name: Run tests
-        run: go test ./...
+        run: go test -mod=mod ./...
 
       - name: Build Linux binary
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
           mkdir -p dist bundle
-          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags="-s -w" -o dist/ai-gateway ./cmd/ai-gateway
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -mod=mod -trimpath -ldflags="-s -w" -o dist/ai-gateway ./cmd/ai-gateway
           tar -czf "dist/ai-gateway_${VERSION}_linux_amd64.tar.gz" -C dist ai-gateway
           rm dist/ai-gateway
 
