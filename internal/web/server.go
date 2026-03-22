@@ -78,7 +78,7 @@ func NewServer(cfg config.Config, store *storage.Store, service *app.Service) *S
 
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
-	mux.Handle("/static/", s.static)
+	mux.Handle("GET /static/", s.static)
 	mux.HandleFunc("GET /", s.redirectHome)
 	mux.HandleFunc("GET /healthz", s.healthz)
 	mux.HandleFunc("GET /v1/models", s.api(s.handleModels))

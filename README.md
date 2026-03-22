@@ -62,16 +62,16 @@ The admin UI is available at `/admin` and supports:
 Use the packaging script to build the transport files:
 
 ```powershell
-.\scripts\build-airgap-bundle.ps1 -Version 0.1.3
+.\scripts\build-airgap-bundle.ps1 -Version 0.1.4
 ```
 
 The script produces:
 
-- `ai-gateway_0.1.3_linux_amd64.tar.gz`
-- `ai-gateway_0.1.3_docker-image.tar`
-- `ai-gateway_0.1.3_source.zip`
-- `ai-gateway_0.1.3_airgap-bundle.zip`
-- `ai-gateway_0.1.3_checksums.txt`
+- `ai-gateway_0.1.4_linux_amd64.tar.gz`
+- `ai-gateway_0.1.4_docker-image.tar`
+- `ai-gateway_0.1.4_source.zip`
+- `ai-gateway_0.1.4_airgap-bundle.zip`
+- `ai-gateway_0.1.4_checksums.txt`
 
 The air-gap bundle contains the binary, Docker image tar, compose file, env example, helper import scripts, and the source snapshot.
 
