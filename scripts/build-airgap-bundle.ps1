@@ -1,5 +1,5 @@
 param(
-  [string]$Version = "0.1.0"
+  [string]$Version = "0.1.1"
 )
 
 $ErrorActionPreference = "Stop"
@@ -61,4 +61,3 @@ Write-Host " - $imageTar"
 Write-Host " - $sourceZip"
 Write-Host " - $bundleZip"
 Write-Host " - $checksums"
-
