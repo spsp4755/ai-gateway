@@ -1,6 +1,6 @@
 services:
   ai-gateway:
-    image: ai-gateway:0.1.4
+    image: ai-gateway:0.1.5
     container_name: ai-gateway
     restart: unless-stopped
     env_file:

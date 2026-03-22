@@ -1,0 +1,11 @@
+.git
+.cache
+.tools
+data
+dist
+*.db
+*.tar
+*.tar.gz
+*.zip
+run-*-logs
+run-*-logs.zip

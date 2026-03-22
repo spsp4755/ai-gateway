@@ -1,7 +1,11 @@
 data/
 dist/
+.cache/
+.tools/
+ai-gateway.exe
 *.db
 *.tar
 *.tar.gz
 *.zip
-
+run-*-logs/
+run-*-logs.zip
